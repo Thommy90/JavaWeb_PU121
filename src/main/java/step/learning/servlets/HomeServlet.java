@@ -6,34 +6,44 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-public class HomeServlet extends HttpServlet {       // Название класса любое
+public class HomeServlet extends HttpServlet {   // назва класу - довільна
     @Override
-    protected void doGet(                            // название метода только так
-                                                     HttpServletRequest request,              // реквест - обьект что дается веб-сервером
-                                                     HttpServletResponse response)            // респонс - то, что будет отправлено как ответ
+    protected void doGet(                    // назва методу - саме так (варації не допускаються)
+                                             HttpServletRequest request,      // request - об'єкт, що надається веб-сервером
+                                             HttpServletResponse response)    // response - те, що буде надіслано як відповідь
             throws ServletException, IOException {
-        request.getRequestDispatcher(                // делаем внутренний редирект - передаем работу
-                        "WEB-INF/index.jsp")                         // до другого обрабщика  - index.jsp
-                .forward(request, response);
+
+        request.setAttribute(                // Атрибути - засіб передачі даних протягом запиту
+                "pageName",                  // ключ - ім'я атрибуту (String)
+                "home"                       // значення атрибуту (Object)
+        );
+        String text =
+        request.getParameter("text");
+        request.setAttribute("text", text);
+                request                            // робимо внутрішній редирект - передаємо роботу
+                .getRequestDispatcher(           // до іншого обробника - ***.jsp
+                        "WEB-INF/_layout.jsp" )  // для того щоб прибрати прямий доступ до ***.jsp його
+                .forward( request, response ) ;  // переміщують у закриту папку WEB-INF
     }
 }
 
-
 /*
-Servlets - специальные классы Java для сетевых задач
-Работа с сервлетами требует установки servlet-api
-Для веб-разработки чаще берется предок HttpServlet
-HttpServlet - можно считать аналогом контроллера в версии API
+Servlets - спеціальні класи Java для мережевих задач
+Робота з сервлетами вимагає встановлення servlet-api
+<!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
+Для веб-розробки частіше за все береться нащадок HttpServlet
+HttpServlet - можна вважати аналогом контроллера у версі API
 
-После создания сервлет нужно зарегистрировать (Есть два способа (без IoC)
-- через настройку сервера web.xml
-- с помощью анотаций (servlet-api 3 и выше)
+Після складання сервлет треба зареєструвати. Є два способи (без ІоС)
+- через налаштування сервера web.xml
+- за допомогою анотацій (servlet-api 3 та вище)
 
-через web.xml
-+ централизованные декларации - все в одном месте
-+ гарантированный порядок деклараций
-+ совмещен с более старыми технологиями
-- более длинные инструкции
+Через web.xml
+ "+" централізовані декларації - усі в одному місці
+     гарантований порядок декларацій
+     сумісність зі старими технологіями
+ "-" більш громіздкі інструкції
+
   <servlet>
     <servlet-name>Home</servlet-name>
     <servlet-class>step.learning.servlets.HomeServlet</servlet-class>
@@ -42,4 +52,5 @@ HttpServlet - можно считать аналогом контроллера 
     <servlet-name>Home</servlet-name>
     <url-pattern>/</url-pattern>
   </servlet-mapping>
+
  */

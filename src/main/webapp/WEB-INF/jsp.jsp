@@ -6,10 +6,7 @@
   To change this template use File | Settings | File Templates.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<html>
-<body>
 
-<jsp:include page="nav.jsp"/>
 <div class="container">
 <h1>Основы JSP</h1>
 <p>
@@ -71,6 +68,4 @@
         </tbody>
     </table>
 </div>
-<jsp:include page="footer.jsp"/>
-</body>
-</html>
+
