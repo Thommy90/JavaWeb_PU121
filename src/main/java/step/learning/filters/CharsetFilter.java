@@ -31,11 +31,6 @@ public class CharsetFilter implements Filter {
         // способ передать данные про работу фильтра - атрибуты запроса
         servletRequest.setAttribute("charset", StandardCharsets.UTF_8.name());
 
-        System.out.println(
-               _filterConfig.getServletContext().getRealPath("./")
-        );
-
-
         //  не забыть передать работу до цепи
         filterChain.doFilter(servletRequest, servletResponse);
         // код спизаписанные после цепи будет выполнятся на внешнем ходу

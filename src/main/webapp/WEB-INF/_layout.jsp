@@ -34,11 +34,6 @@
 </nav>
 <jsp:include page="<%= pageName %>" />
 
-<p>
-    Установлено кодирование: <%= request.getAttribute("charset") %>
-    <%-- атрибут устанавливается в филтре CharsetFilter --%>
-</p>
-
 <footer class="page-footer light-blue lighten-1">
     <div class="footer-copyright">
         <div class="container">
