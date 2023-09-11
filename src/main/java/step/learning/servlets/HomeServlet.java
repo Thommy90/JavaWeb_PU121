@@ -1,6 +1,8 @@
 package step.learning.servlets;
 
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import step.learning.services.db.DbProvider;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -10,6 +12,7 @@ import java.io.IOException;
 @Singleton
 
 public class HomeServlet extends HttpServlet {   // назва класу - довільна
+
     @Override
     protected void doGet(                    // назва методу - саме так (варації не допускаються)
                                              HttpServletRequest request,      // request - об'єкт, що надається веб-сервером

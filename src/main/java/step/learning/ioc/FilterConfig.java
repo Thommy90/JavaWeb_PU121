@@ -2,6 +2,7 @@ package step.learning.ioc;
 
 import com.google.inject.servlet.ServletModule;
 import step.learning.filters.CharsetFilter;
+import step.learning.filters.DbFilter;
 import step.learning.filters.RegisterFilter;
 
 /*
@@ -12,5 +13,6 @@ public class FilterConfig extends ServletModule {
     protected void configureServlets() {
         filter("/*").through(RegisterFilter.class);
         filter("/*").through(CharsetFilter.class);
+        filter("/*").through(DbFilter.class);
     }
 }

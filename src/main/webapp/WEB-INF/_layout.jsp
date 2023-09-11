@@ -29,10 +29,23 @@
             <li <% if("aboutServlet.jsp".equals(pageName)) { %>class="active"<% } %>> <a href="<%= contextPath %>/aboutServlet">aboutServlet</a></li>
             <li <% if("url.jsp".equals(pageName)) { %>class="active"<% } %>><a href="<%= contextPath %>/url">About URL</a></li>
             <li <% if("hash.jsp".equals(pageName)) { %>class="active"<% } %>><a href="<%= contextPath %>/hash">Hash</a></li>
+            <li> <a class="waves-effect light-blue btn modal-trigger" href="#auth-modal"><span class="material-icons">login</span></a></li>
         </ul>
     </div>
 </nav>
 <jsp:include page="<%= pageName %>" />
+
+<%-- Materialize Modal (Auth block) --%>
+<!-- Modal Structure -->
+<div id="auth-modal" class="modal">
+    <div class="modal-content">
+        <h4>Modal Header</h4>
+        <p>A bunch of text</p>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Agree</a>
+    </div>
+</div>
 
 <footer class="page-footer light-blue lighten-1">
     <div class="footer-copyright">
@@ -45,5 +58,13 @@
 </footer>
 <!--JavaScript at end of body for optimized loading-->
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var elems = document.querySelectorAll('.modal');
+        M.Modal.init(elems, {
+            opacity: 0.5
+        });
+    });
+</script>
 </body>
 </html>
