@@ -4,6 +4,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.name.Names;
 import step.learning.services.db.DbProvider;
 import step.learning.services.db.PlanetDbProvider;
+import step.learning.services.formparse.FormParseService;
+import step.learning.services.formparse.MixedFormParseService;
 import step.learning.services.hash.HashService;
 import step.learning.services.hash.KupinaHashService;
 import step.learning.services.kdf.HashKdfService;
@@ -16,9 +18,13 @@ public class ServiceConfig extends AbstractModule {
         bind (DbProvider.class).to(PlanetDbProvider.class);
 
         bind( KdfService.class ).to( HashKdfService.class ) ;
+        bind( FormParseService.class ).to( MixedFormParseService.class ) ;
 
         bind( String.class )
                 .annotatedWith( Names.named( "DbPrefix" ) )
                 .toInstance( "pu121_" ) ;
+        bind( String.class )
+                .annotatedWith( Names.named( "UploadDir" ) )
+                .toInstance( "upload" ) ;
     }
 }

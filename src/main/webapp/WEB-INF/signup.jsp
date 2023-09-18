@@ -56,11 +56,11 @@
                 <div class="file-field input-field col s6">
                     <div class="btn">
                         <span>File</span>
-                        <input type="file">
+                        <input type="file" id="reg-avatar"  name="reg-avatar">
                     </div>
                     <div class="file-path-wrapper">
                         <input class="file-path validate" type="text"
-                               id="reg-avatar"  name="reg-avatar" placeholder="Виберіть аватар">
+                                placeholder="Виберіть аватар">
                     </div>
                 </div>
             </div>
@@ -166,14 +166,16 @@
         formData.append( birthdateInput.name, birthdateInput.value ) ;
         formData.append( cultureInput.name,   cultureInput.value   ) ;
         formData.append( genderInput.name,    genderInput.value    ) ;
-        // formData.append( avatarInput.name,  avatarInput.value  ) ;
+        if (avatarInput.files.length > 0) {
+            formData.append(avatarInput.name, avatarInput.files[0]);
+        }
         var object = {};
         formData.forEach((value, key) => object[key] = value);
-       // console.log( JSON.stringify(object) ) ;
+        console.log( JSON.stringify(object) ) ;
 
         fetch( window.location.href, {
             method: 'POST',
             body: formData
-        }).then( r => r.text()).then( console.log ) ;
+        }).then( r => r.json()).then( console.log ) ;
     }
 </script>
