@@ -7,6 +7,8 @@ import step.learning.db.dto.User;
 import step.learning.services.db.DbProvider;
 import step.learning.services.kdf.KdfService;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
@@ -31,32 +33,98 @@ public class UserDao {
     /**
      * CREATE TABLE and INSERT first user
      */
+//    public void add(User user)
+//    {
+//        user.setId(UUID.randomUUID()) ;
+//        user.setSalt(user.getId().toString().substring(0, 8));
+//        user.setPasswordDk(kdfService.getDerivedKey( user.getPasswordDk(), user.getSalt()));
+//
+//
+//        String insertSQL = String.format(
+//                "INSERT INTO %1$sUsers (id, firstName, lastName, email, phone, `login`, " +
+//                        "salt, passwordDk, culture, gender) " +
+//                        "VALUES( '%2$s', '%3$s', '%4$s', '%5$s', '%6$s', '%7$s', '%8$s', '%9$s', '%10$s'" +
+//                        ", '%11$s' )",
+//                dbPrefix, user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getPhone(),
+//                user.getLogin(), user.getSalt(), user.getPasswordDk(), user.getCulture(), user.getGender()
+//        ) ;
+//
+//        try( Statement statement = dbProvider.getConnection().createStatement() ) {
+//            statement.executeUpdate( insertSQL ) ;
+//        }
+//        catch( SQLException ex ) {
+//            logger.log(
+//                    Level.SEVERE,
+//                    ex.getMessage() + "--" + insertSQL
+//            ) ;
+//            throw new RuntimeException(ex);
+//        }
+//    }
+
     public void add(User user)
     {
-        user.setId(UUID.randomUUID()) ;
-        user.setSalt(user.getId().toString().substring(0, 8));
-        user.setPasswordDk(kdfService.getDerivedKey( user.getPasswordDk(), user.getSalt()));
-
-
-        String insertSQL = String.format(
-                "INSERT INTO %1$sUsers (id, firstName, lastName, email, phone, `login`, " +
-                        "salt, passwordDk, culture, gender) " +
-                        "VALUES( '%2$s', '%3$s', '%4$s', '%5$s', '%6$s', '%7$s', '%8$s', '%9$s', '%10$s'" +
-                        ", '%11$s' )",
-                dbPrefix, user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getPhone(),
-                user.getLogin(), user.getSalt(), user.getPasswordDk(), user.getCulture(), user.getGender()
-        ) ;
-
-        try( Statement statement = dbProvider.getConnection().createStatement() ) {
-            statement.executeUpdate( insertSQL ) ;
+        String sql = "INSERT INTO "+dbPrefix+"Users(`id`, `firstName`, `lastName`,`email`," +
+                " `phone`,`birthdate`,`avatar`,`login`,`salt`,`passwordDk`,`registerDT`,`culture`,`gender`" +
+                ",`emailConfirmCode`,`phoneConfirmCode`)" +
+                " VALUES( ?, ?, ?, ?,?,?,?,?,?, ?, ?, ?,?,?, ? )";
+        try(PreparedStatement prep = dbProvider.getConnection().prepareStatement(sql) ) {
+            prep.setString(1, user.getId()==null ? UUID.randomUUID().toString() : user.getId().toString());
+            prep.setString(2, user.getFirstName());
+            prep.setString(3, user.getLastName());
+            prep.setString(4, user.getEmail());
+            prep.setString(5, user.getPhone());
+            prep.setDate (6, new java.sql.Date(user.getBirthdate().getTime()));
+            prep.setString(7, user.getAvatar());
+            prep.setString(8, user.getLogin());
+            prep.setString(9, user.getSalt());
+            prep.setString(10, user.getPasswordDk());
+            prep.setTimestamp (11, new java.sql.Timestamp(user.getRegisterDT().getTime()));
+            prep.setString(12, user.getCulture());
+            prep.setString(13, user.getGender());
+            prep.setString(14, user.getEmailConfirmCode());
+            prep.setString(15, user.getPhoneConfirmCode());
+            prep.executeUpdate();
         }
         catch( SQLException ex ) {
             logger.log(
                     Level.SEVERE,
-                    ex.getMessage() + "--" + insertSQL
+                    ex.getMessage() + "--" + sql
+            ) ;        throw new RuntimeException(ex);
+        }
+    }
+
+    /**
+     * Authentication of user
+     * @param login
+     * @param password
+     * @return UserDTO or null
+     */
+    public User authenticate (String login, String password){
+        //1 ищем пользователя по логину
+        //2 получаем соль и ДК
+        // генерируем дк и соль с паролем, проверяем соответствие
+        String sql = "SELECT u.* FROM " + dbPrefix + "Users u WHERE u.`login` = ?";
+        try( PreparedStatement prep = dbProvider.getConnection().prepareStatement(sql)){
+            prep.setString(1, login);
+            ResultSet res = prep.executeQuery();
+            if (res.next()){
+                User user = new User(res);
+                if( kdfService
+                        .getDerivedKey(password, user.getSalt())
+                        .equals(user.getPasswordDk()))
+                {
+                    return  user;
+                }
+            }
+        }
+        catch( SQLException ex ) {
+            logger.log(
+                    Level.SEVERE,
+                    ex.getMessage() + "--" + sql
             ) ;
             throw new RuntimeException(ex);
         }
+        return null;
     }
     public void install() {
         String createTableSQL = "CREATE TABLE IF NOT EXISTS " + dbPrefix +"Users (" +

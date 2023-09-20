@@ -43,20 +43,21 @@
         <div class="row valign-wrapper">
             <div class="input-field col s6">
                 <i class="material-icons prefix">account_circle</i>
-                <input id="auth-login" name="auth-login" type="text" class="validate">
-                <label for="auth-login">Логін</label>
+                <input id="authLogin" name="authLogin" type="text" class="validate">
+                <label for="authLogin">Логін</label>
             </div>
             <div class="input-field col s6">
                 <i class="material-icons prefix">mode_edit</i>
-                <input id="auth-password" name="auth-password" type="text" class="validate">
-                <label for="auth-password">Пароль</label>
+                <input id="authPassword" name="authPassword" type="text" class="validate">
+                <label for="authPassword">Пароль</label>
             </div>
         </div>
     </div>
     <div class="modal-footer">
+        <div id="signup"  style="color: red;" class="waves-effect"></div>
         <a href="<%= contextPath %>/signup" class="modal-close waves-effect waves-green btn-flat teal lighten-3">Реєстрація</a>
         <a href="#!" class="modal-close waves-effect waves-green btn-flat indigo lighten-3">Забув пароль</a>
-        <a href="#!" class="modal-close waves-effect waves-green btn-flat green lighten-3">Вхід</a>
+        <a class="waves-effect waves-green btn-flat green lighten-3" id="submit">Вхід</a>
     </div>
 </div>
 
@@ -75,9 +76,30 @@
     document.addEventListener('DOMContentLoaded', function() {
         var elems = document.querySelectorAll('.modal');
         M.Modal.init(elems, {
-            opacity: 0.5
+            opacity: 0.5,
+            dismissible: false
         });
+        const signupButton = document.getElementById('submit');
+        if( signupButton ) {
+            signupButton.addEventListener( 'click', loginClick ) ;
+        }
+        else {
+            console.error( 'signupButton not found' )
+        }
     });
+
+    function loginClick() {
+        const authLogin = document.getElementById('authLogin');
+        if( ! authLogin ) throw "input id='auth-login' not found" ;
+        const authPassword = document.getElementById('authPassword');
+        if( ! authPassword ) throw "input id='auth-password' not found" ;
+     
+
+        const url = "/JavaWeb_PU121/signup?authLogin="+ authLogin.value+"&authPassword="+authPassword.value;
+        fetch( url, {
+            method: 'PUT'
+        }).then( r => r.json()).then(r => document.getElementById('signup').textContent=r.message) ;
+    }
 </script>
 </body>
 </html>

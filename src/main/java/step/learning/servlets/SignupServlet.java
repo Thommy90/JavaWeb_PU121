@@ -6,8 +6,11 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import org.apache.commons.fileupload.FileItem;
+import step.learning.db.dao.UserDao;
+import step.learning.db.dto.User;
 import step.learning.services.formparse.FormParseResult;
 import step.learning.services.formparse.FormParseService;
+import step.learning.services.kdf.KdfService;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -15,22 +18,30 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 @Singleton
 public class SignupServlet extends HttpServlet {
     private final FormParseService formParseService;
     private final String uploadDir;
+    private final KdfService kdfService ;
+    private final UserDao userDao;
+    private final Logger logger;
 
     @Inject
-    public SignupServlet(FormParseService formParseService, @Named("UploadDir") String uploadDir) {
+    public SignupServlet(FormParseService formParseService, @Named("UploadDir") String uploadDir, KdfService kdfService, UserDao userDao, Logger logger) {
         this.formParseService = formParseService;
         this.uploadDir = uploadDir;
+        this.kdfService = kdfService;
+        this.userDao = userDao;
+        this.logger = logger;
     }
 
     @Override
@@ -42,16 +53,18 @@ public class SignupServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
-
         SignupFormData formData;
+        ResponseData responseData;
         try {
             formData = new SignupFormData(req);
+            User user = formData.toUserDto();
+            userDao.add(user);
+            // TODO: send confirm codes
+            responseData = new ResponseData(200, "OK");
+
         } catch (Exception ex) {
-            resp.getWriter().print(
-                    "There was an error: " + ex.getMessage()
-            );
-            formData = null;
+            logger.log(Level.SEVERE, ex.getMessage());
+            responseData = new ResponseData(500, "Error");
         }
 
         GsonBuilder builder = new GsonBuilder();
@@ -59,7 +72,46 @@ public class SignupServlet extends HttpServlet {
         Gson gson = builder.create();
 
         resp.getWriter().print(
-                gson.toJson(formData)
+                gson.toJson(responseData)
+        );
+    }
+
+    class ResponseData{
+        int statusCode;
+        String message;
+
+        public ResponseData() {
+        }
+
+        public ResponseData(int statusCode, String message) {
+            this.statusCode = statusCode;
+            this.message = message;
+        }
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        ResponseData responseData;
+        try {
+            User user = userDao.authenticate(req.getParameter("authLogin"), req.getParameter("authPassword"));
+            if(user != null){
+                responseData = new ResponseData(200, "Authorization successful");
+            }
+            else{
+                responseData = new ResponseData(500, "Login or password uncorrected");
+            }
+
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, ex.getMessage());
+            responseData = new ResponseData(500, "Error");
+        }
+
+        GsonBuilder builder = new GsonBuilder();
+        builder.setPrettyPrinting();
+        Gson gson = builder.create();
+
+        resp.getWriter().print(
+                gson.toJson(responseData)
         );
     }
 
@@ -73,23 +125,62 @@ public class SignupServlet extends HttpServlet {
         private String password;
         private String culture;
         private String gender;
-        private LocalDate birthdate;
+        private Date birthdate;
         private String avatar;
+        private final transient SimpleDateFormat dateParser =
+                new SimpleDateFormat("yyyy-MM-dd") ;
+
+        public User toUserDto(){
+            User user = new User();
+            user.setId(UUID.randomUUID());
+            user.setAvatar(this.getAvatar());
+            user.setFirstName(this.getName());
+            user.setLastName(this.getLastname());
+            user.setLogin(this.getLogin());
+            user.setGender(this.getGender());
+            user.setCulture(this.getCulture());
+            user.setBirthdate(this.getBirthdate());
+            user.setPhone(this.getPhone());
+            user.setEmail(this.getEmail());
+            if( user.getPhone() != null){
+                String phoneCode = UUID.randomUUID().toString().substring(0, 6);
+                user.setPhoneConfirmCode(phoneCode);
+            }
+            if( user.getEmail() != null){
+                String emailCode = UUID.randomUUID().toString().substring(0, 6);
+                user.setEmailConfirmCode(emailCode);
+            }
+            user.setDeleteDT(null);
+            user.setBanDT(null);
+            user.setRegisterDT(new Date());
+            user.setLastLoginDT(null);
+
+            user.setSalt( user.getId().toString().substring(0, 8) ) ;
+            user.setPasswordDk( kdfService.getDerivedKey( this.getPassword(), user.getSalt() ) ) ;
+            user.setRoleId(null);
+            return user;
+        }
 
         // endregion
-        public LocalDate getBirthdate() {
+        public Date getBirthdate() {
             return birthdate;
         }
 
-        public void setBirthdate(LocalDate birthdate) {
+        public void setBirthdate(Date birthdate) {
             this.birthdate = birthdate;
         }
 
         public void setBirthdate(String birthdate) {
-            if (birthdate != null && !birthdate.equals("")) {
-                this.birthdate = LocalDate.parse(birthdate);
-            } else {
-                this.birthdate = null;
+            if( birthdate != null && ! birthdate.isEmpty() ) {
+                try {
+                    setBirthdate( dateParser.parse( birthdate ) ) ;
+                }
+                catch( ParseException ex ) {
+                    throw new RuntimeException( ex ) ;
+                }
+            }
+            else {
+                setBirthdate( (Date) null ) ;
             }
         }
 
