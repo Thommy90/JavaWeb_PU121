@@ -3,6 +3,7 @@ package step.learning.servlets;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import step.learning.db.dao.UserDao;
+import step.learning.db.dao.WebTokenDao;
 import step.learning.db.dto.User;
 
 import javax.servlet.ServletException;
@@ -16,11 +17,14 @@ import java.util.Date;
 public class InstallServlet extends HttpServlet {
     @Inject
     private UserDao userDao ;
+    @Inject
+    private WebTokenDao webTokenDao;
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
-           // userDao.install() ;
+            webTokenDao.install();
+            userDao.install() ;
            // resp.getWriter().print( "Install OK" ) ;
             User user = new User();
             user.setFirstName("Kostya");

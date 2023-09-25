@@ -25,6 +25,7 @@
     <div class="nav-wrapper light-blue lighten-1">
         <a href="<%= contextPath %>" class="brand-logo">Logo(Home)</a>
         <ul id="nav-mobile" class="right hide-on-med-and-down">
+            <li><a href="#front">Front</a></li>
             <li <% if("jsp.jsp".equals(pageName)) { %>class="active"<% } %>> <a href="<%= contextPath %>/jsp" > JSP</a></li>
             <li <% if("aboutServlet.jsp".equals(pageName)) { %>class="active"<% } %>> <a href="<%= contextPath %>/aboutServlet">aboutServlet</a></li>
             <li <% if("url.jsp".equals(pageName)) { %>class="active"<% } %>><a href="<%= contextPath %>/url">About URL</a></li>
@@ -43,21 +44,21 @@
         <div class="row valign-wrapper">
             <div class="input-field col s6">
                 <i class="material-icons prefix">account_circle</i>
-                <input id="authLogin" name="authLogin" type="text" class="validate">
-                <label for="authLogin">Логін</label>
+                <input id="auth-login" name="auth-login" type="text" class="validate">
+                <label for="auth-login">Логін</label>
             </div>
             <div class="input-field col s6">
                 <i class="material-icons prefix">mode_edit</i>
-                <input id="authPassword" name="authPassword" type="text" class="validate">
-                <label for="authPassword">Пароль</label>
+                <input id="auth-password" name="auth-password" type="text" class="validate">
+                <label for="auth-password">Пароль</label>
             </div>
         </div>
     </div>
     <div class="modal-footer">
-        <div id="signup"  style="color: red;" class="waves-effect"></div>
+        <div id="result"  style="color: red;" class="waves-effect"></div>
         <a href="<%= contextPath %>/signup" class="modal-close waves-effect waves-green btn-flat teal lighten-3">Реєстрація</a>
         <a href="#!" class="modal-close waves-effect waves-green btn-flat indigo lighten-3">Забув пароль</a>
-        <a class="waves-effect waves-green btn-flat green lighten-3" id="submit">Вхід</a>
+        <a class="waves-effect waves-green btn-flat green lighten-3" id="sign-button">Вхід</a>
     </div>
 </div>
 
@@ -74,31 +75,128 @@
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        var elems = document.querySelectorAll('.modal');
+        const elems = document.querySelectorAll('.modal');
         M.Modal.init(elems, {
-            opacity: 0.5,
-            dismissible: false
-        });
-        const signupButton = document.getElementById('submit');
-        if( signupButton ) {
-            signupButton.addEventListener( 'click', loginClick ) ;
-        }
-        else {
-            console.error( 'signupButton not found' )
-        }
+            opacity: 0.5
+        } ) ;
+        initModalButtons() ;
+        window.addEventListener('hashchange', frontRouter) ;
+        frontRouter() ;
     });
 
-    function loginClick() {
-        const authLogin = document.getElementById('authLogin');
-        if( ! authLogin ) throw "input id='auth-login' not found" ;
-        const authPassword = document.getElementById('authPassword');
-        if( ! authPassword ) throw "input id='auth-password' not found" ;
-     
+    function frontRouter() {
+        console.log(location.hash);
+        switch( location.hash ) {
+            case '#front':
+                loadFrontPage();
+                break;
+            default:
+        }
+    }
 
-        const url = "/JavaWeb_PU121/signup?authLogin="+ authLogin.value+"&authPassword="+authPassword.value;
-        fetch( url, {
-            method: 'PUT'
-        }).then( r => r.json()).then(r => document.getElementById('signup').textContent=r.message) ;
+    function loadFrontPage() {
+        const token = window.localStorage.getItem('token');
+        const headers = (token == null) ? {} : {
+            'Authorization': `Bearer ${token}`
+        }
+        fetch('<%= contextPath %>/front', {
+            method: 'GET',
+            headers: headers
+        }).then(r => r.text())
+            .then(t => {
+                console.log(t)
+            });
+    }
+
+    // document.addEventListener('DOMContentLoaded', function() {
+    //     var elems = document.querySelectorAll('.modal');
+    //     M.Modal.init(elems, {
+    //         opacity: 0.5,
+    //         dismissible: false
+    //     });
+    //     const signupButton = document.getElementById('submit');
+    //     if( signupButton ) {
+    //         signupButton.addEventListener( 'click', loginClick ) ;
+    //     }
+    //     else {
+    //         console.error( 'signupButton not found' )
+    //     }
+    // });
+    //
+    // function loginClick() {
+    //     const authLogin = document.getElementById('authLogin');
+    //     if( ! authLogin ) throw "input id='auth-login' not found" ;
+    //     const authPassword = document.getElementById('authPassword');
+    //     if( ! authPassword ) throw "input id='auth-password' not found" ;
+    //
+    //
+    //     const url = "/JavaWeb_PU121/signup?authLogin="+ authLogin.value+"&authPassword="+authPassword.value;
+    //     fetch( url, {
+    //         method: 'PUT'
+    //     }).then( r => r.json()).then(r => document.getElementById('signup').textContent=r.message) ;
+    // }
+    function initModalButtons() {
+        const signButton = document.getElementById('sign-button');
+        if( signButton ) {
+            signButton.addEventListener( 'click', loginClick ) ;
+        }
+        else {
+            console.error( '#sign-button not found' );
+        }
+    }
+
+    function loginClick() {
+        const loginInput = document.getElementById('auth-login');
+        if( ! loginInput ) throw "input id='auth-login' not found" ;
+        const passwordInput = document.getElementById('auth-password');
+        if( ! passwordInput ) throw "input id='auth-password' not found" ;
+
+        const authLogin = loginInput.value.trim() ;
+        if( authLogin.length < 2 ) {
+            alert( "Логін занадто короткий або не введений!" ) ;
+            return ;
+        }
+        const authPassword = passwordInput.value ;
+        if( authPassword.length < 2 ) {
+            alert( "Пароль занадто короткий або не введений" ) ;
+            return ;
+        }
+        // const url = `<%= contextPath %>/signup?auth-login=${authLogin}&auth-password=${authPassword}`;
+        const url = `<%= contextPath %>/signup` ;
+        // let formData = new FormData();
+        // formData.append('auth-login',authLogin );
+        // formData.append('auth-password',authPassword );
+        // fetch(url, { method: 'PUT', body: formData })
+        fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                'auth-login': authLogin,
+                'auth-password': authPassword
+            })
+        })
+            .then(response => {
+                return response.json(); // Парсимо відповідь як JSON
+            })
+            .then(data => {
+// data буде об'єктом, який містить поля statusCode та message
+                console.log(data);
+                if( data.statusCode == 200 ) {
+                    window.localStorage.setItem('token', data.message);
+                    // close Material modal
+                    const instance = M.Modal.getInstance(document.getElementById("auth-modal"));
+                    instance.close();
+                }
+                else {
+                    const result = document.getElementById('result');
+                    result.textContent = data.message;
+                }
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+            });
     }
 </script>
 </body>
