@@ -7,10 +7,21 @@ import step.learning.db.dto.User;
 import step.learning.services.db.DbProvider;
 import step.learning.services.kdf.KdfService;
 
+import javax.activation.DataHandler;
+import javax.activation.FileDataSource;
+import javax.mail.*;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Properties;
+import java.util.Random;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -68,22 +79,54 @@ public class UserDao {
                 ",`emailConfirmCode`,`phoneConfirmCode`)" +
                 " VALUES( ?, ?, ?, ?,?,?,?,?,?, ?, ?, ?,?,?, ? )";
         try(PreparedStatement prep = dbProvider.getConnection().prepareStatement(sql) ) {
-            prep.setString(1, user.getId()==null ? UUID.randomUUID().toString() : user.getId().toString());
+            prep.setString(1, user.getId() == null ? UUID.randomUUID().toString() : user.getId().toString());
             prep.setString(2, user.getFirstName());
             prep.setString(3, user.getLastName());
             prep.setString(4, user.getEmail());
             prep.setString(5, user.getPhone());
-            prep.setDate (6, new java.sql.Date(user.getBirthdate().getTime()));
+            prep.setDate(6, new java.sql.Date(user.getBirthdate().getTime()));
             prep.setString(7, user.getAvatar());
             prep.setString(8, user.getLogin());
             prep.setString(9, user.getSalt());
             prep.setString(10, user.getPasswordDk());
-            prep.setTimestamp (11, new java.sql.Timestamp(user.getRegisterDT().getTime()));
+            prep.setTimestamp(11, new java.sql.Timestamp(user.getRegisterDT().getTime()));
             prep.setString(12, user.getCulture());
             prep.setString(13, user.getGender());
             prep.setString(14, user.getEmailConfirmCode());
             prep.setString(15, user.getPhoneConfirmCode());
             prep.executeUpdate();
+
+            Properties emailProperties = new Properties();
+            emailProperties.put("mail.smtp.auth", "true");
+            emailProperties.put("mail.smtp.starttls.enable", "true");
+            emailProperties.put("mail.smtp.host", "smtp.gmail.com");
+            emailProperties.put("mail.smtp.port", "587");
+            emailProperties.put("mail.smtp.ssl.protocols", "TLSv1.2");
+            emailProperties.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+            javax.mail.Session mailSession = javax.mail.Session.getInstance(emailProperties,
+                    new Authenticator() {
+                        @Override
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication("tomas.k.u90@gmail.com", "lrmraapcxarfubmv");
+                        }
+                    }
+            );
+            MimeMessage message = new MimeMessage(mailSession);
+            try {
+                message.setFrom(new javax.mail.internet.InternetAddress("proviryalovich@gmail.com"));
+                message.setSubject("Реєстрація на JavaWeb");
+                message.setRecipients(
+                        Message.RecipientType.TO,
+                        InternetAddress.parse(user.getEmail()));
+                MimeBodyPart htmlPart = new MimeBodyPart();
+                htmlPart.setContent("<b>Вітаємо</b> з реєстрацією <a href='http://localhost:8080/JavaWeb_PU121/'>на сайті!</a> Ваш код підтверження - 'HereMustBeCode'", "text/html; charset=UTF-8");
+                Multipart mailContent = new MimeMultipart();
+                mailContent.addBodyPart(htmlPart);
+                message.setContent(mailContent);
+                Transport.send(message);
+            } catch (MessagingException e) {
+                throw new RuntimeException(e);
+            }
         }
         catch( SQLException ex ) {
             logger.log(

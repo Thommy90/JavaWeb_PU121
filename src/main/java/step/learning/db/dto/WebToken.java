@@ -46,7 +46,7 @@ public class WebToken {   // https://en.wikipedia.org/wiki/JSON_Web_Token
         setId( UUID.fromString( json.get( "id" ).getAsString() ) ) ;
         setSub( UUID.fromString( json.get( "sub" ).getAsString() ) ) ;
         setExp( dateParser.parse(json.get( "exp" ).getAsString() ) ) ;
-        setIat(dateParser.parse(json.get( "iat" ).getAsString() ) ) ;
+        setIat( dateParser.parse(json.get( "iat" ).getAsString() ) ) ;
     }
 
     public String toBase64() {

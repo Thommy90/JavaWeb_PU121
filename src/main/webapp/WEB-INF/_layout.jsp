@@ -30,6 +30,9 @@
             <li <% if("aboutServlet.jsp".equals(pageName)) { %>class="active"<% } %>> <a href="<%= contextPath %>/aboutServlet">aboutServlet</a></li>
             <li <% if("url.jsp".equals(pageName)) { %>class="active"<% } %>><a href="<%= contextPath %>/url">About URL</a></li>
             <li <% if("hash.jsp".equals(pageName)) { %>class="active"<% } %>><a href="<%= contextPath %>/hash">Hash</a></li>
+            <li <% if ("servlet.jsp".equals(pageName)) { %> class="active" <% } %> >
+                <a href="<%=contextPath%>/mail">Mail</a>
+            </li>
             <li> <a class="waves-effect light-blue btn modal-trigger" href="#auth-modal"><span class="material-icons">login</span></a></li>
         </ul>
     </div>
@@ -96,6 +99,30 @@
 
     function loadFrontPage() {
         const token = window.localStorage.getItem('token');
+        if(!token){
+            alert("Для этой страницы нужна авторизация");
+            window.location.href ="<%= contextPath %>/";
+            return;
+        }
+        try {
+            let data = JSON.parse(atob(token))
+        }catch (ex){
+            alert("Токен недействителен");
+            window.location.href ="<%= contextPath %>/";
+            localStorage.removeItem('token');
+            return;
+        }
+        const tokenParse = JSON.parse(atob(localStorage.getItem('token')));
+        const currentDate = new Date();
+        const tokenDate = new Date(tokenParse.exp);
+        if (currentDate.getTime() > tokenDate.getTime()) {
+            alert("Нужно перезалогиниться (токен устарел)");
+            localStorage.removeItem('token');
+            return;
+        }
+        console.log("дата сейчас: " + currentDate)
+        console.log(" - дата окончания токена: " + tokenDate);
+        console.log("проверка пройдена!");
         const headers = (token == null) ? {} : {
             'Authorization': `Bearer ${token}`
         }
