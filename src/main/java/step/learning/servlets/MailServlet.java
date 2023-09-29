@@ -96,7 +96,7 @@ public class MailServlet extends HttpServlet {
 
             String name = "aboutURL.png";
 //         String path = this.getClass().getClassLoader().getResource(name).getPath();
-//                        /D:/Working%20folder/Java/JavaWeb-PU121/target/JavaWeb-PU121/WEB-INF/classes/qwert.png
+//                        \Users\thommy\IdeaProjects\JavaWeb_PU121\target\classes\aboutURL.png
 
             String path = "\\Users\\thommy\\IdeaProjects\\JavaWeb_PU121\\target\\classes\\aboutURL.png";
 
