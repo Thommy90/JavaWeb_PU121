@@ -1,29 +1,33 @@
 package step.learning.db.dao;
 
+import com.google.gson.Gson;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import step.learning.services.db.DbProvider;
 import step.learning.db.dto.User;
 import step.learning.db.dto.WebToken;
-import step.learning.services.db.DbProvider;
 
 import java.sql.*;
+import java.text.ParseException;
 import java.util.Date;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WebTokenDao {
     private final DbProvider dbProvider ;
-    private final Logger logger ;
-    private final String dbPrefix ;
+    private final Logger logger;
+    private  final String dbPrefix;
 
     @Inject
-    public WebTokenDao(DbProvider dbProvider, Logger logger,
-                       @Named("DbPrefix") String dbPrefix) {
+    public WebTokenDao(DbProvider dbProvider, Logger logger, @Named("DbPrefix")String dbPrefix) {
         this.dbProvider = dbProvider;
         this.logger = logger;
         this.dbPrefix = dbPrefix;
     }
+
     public WebToken get( User user ) {
         if( user == null ) {
             return null ;
@@ -93,7 +97,8 @@ public class WebTokenDao {
                     "WHERE `id` = '" + activeToken.getId() + "'" ;
             try( Statement statement = dbProvider.getConnection().createStatement() ) {
                 statement.executeUpdate( sql ) ;
-                activeToken.setExp( new Date( new Date().getTime() + 24*60*60*1000 ) ) ;
+                activeToken.setIat(new Date(activeToken.getIat().getTime()));
+                activeToken.setExp( new Date( new Date().getTime() + 60000 ) ) ;//+ 24*60*60*1000
                 return activeToken ;
             }
             catch( SQLException ex ) {
@@ -107,47 +112,65 @@ public class WebTokenDao {
     }
 
     public User getSubject( WebToken token ) {
-        if( token == null ||
-                token.getId() == null ||
-                token.getSub() == null ||
-                token.getExp() == null ||
-                token.getExp().before( new Date() )
-        ) {
+        if(token==null ||
+                token.getId()==null||
+                token.getSub()==null||
+                token.getExp()==null||
+                token.getExp().before(new Date()) )
+        {
             return null ;
         }
-        String sql = "SELECT u.* " +
-                "FROM " + dbPrefix +"Users u " +
-                "JOIN " + dbPrefix +"WebTokens w ON u.`id` = w.`sub` " +
-                "WHERE w.`id` = ? AND w.`exp` > CURRENT_TIMESTAMP " ;
-        try( PreparedStatement prep = dbProvider.getConnection().prepareStatement( sql ) ) {
-            prep.setString( 1, token.getId().toString() ) ;
-            ResultSet res = prep.executeQuery() ;
-            if( res.next() ) {
-                return new User( res ) ;
+
+        String sql = "SELECT u. * "+
+                "FROM "+ dbPrefix +"Users u "+
+                "JOIN " + dbPrefix +"WebTokens w ON u.`id` = w.`sub` "+
+                "WHERE w.`id` = ? AND w.`exp` > CURRENT_TIMESTAMP ";
+        try(PreparedStatement prep = dbProvider.getConnection().prepareStatement(sql))
+        {
+            prep.setString(1,token.getId().toString());
+            ResultSet res =prep.executeQuery();
+            if(res.next())
+            {
+                return new User(res);
             }
         }
-        catch( SQLException ex ) {
-            logger.log( Level.SEVERE, ex.getMessage() + "--" + sql ) ;
+        catch (SQLException ex)
+        {
+            logger.log(Level.SEVERE,ex.getMessage()+sql);
+
         }
         return null ;
+    }
+    public User getSubject( String header )
+    {
+
+        String pattern = "Bearer (.+)$";
+        Pattern reges = Pattern.compile(pattern);
+        Matcher matches = reges.matcher(header);
+        if(matches.find()){
+            try{
+                return this.getSubject(new WebToken(matches.group(1)));
+            }
+            catch (ParseException ignored){ }
+        }
+        return null;
     }
 
     public void install() {
         String createTableSQL = "CREATE TABLE IF NOT EXISTS " + dbPrefix +"WebTokens (" +
-                "`id`    CHAR(36)   PRIMARY KEY," +
-                "`sub`   CHAR(36)   COMMENT 'User Id'," +
-                "`exp`   DATETIME   NOT NULL," +
-                "`iat`   DATETIME   DEFAULT CURRENT_TIMESTAMP" +
+                "id    CHAR(36)   PRIMARY KEY," +
+                "sub   CHAR(36)   COMMENT 'User Id'," +
+                "exp   DATETIME   NOT NULL," +
+                "iat   DATETIME   DEFAULT CURRENT_TIMESTAMP" +
                 ") Engine = InnoDB  DEFAULT CHARSET = utf8" ;
+        try(Statement statement=dbProvider.getConnection().createStatement())
+        {
+            statement.executeUpdate(createTableSQL);
 
-        try( Statement statement = dbProvider.getConnection().createStatement() ) {
-            statement.executeUpdate( createTableSQL ) ;
         }
-        catch( SQLException ex ) {
-            logger.log(
-                    Level.SEVERE,
-                    ex.getMessage() + "--" + createTableSQL
-            ) ;
+        catch (SQLException ex)
+        {
+            logger.log(Level.SEVERE,ex.getMessage()+"--"+"createTableSQL"+"--"+createTableSQL);
             throw new RuntimeException(ex);
         }
     }

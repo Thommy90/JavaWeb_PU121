@@ -1,6 +1,8 @@
 package step.learning.servlets;
 
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import step.learning.services.email.EmailService;
 
 import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
@@ -22,6 +24,11 @@ import java.util.Properties;
 
 @Singleton
 public class MailServlet extends HttpServlet {
+    private final EmailService emailService;
+    @Inject
+    public MailServlet(EmailService emailService) {
+        this.emailService = emailService;
+    }
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         // метод викликається до того, як відбувається розподіл за doXxx методами,
@@ -33,8 +40,26 @@ public class MailServlet extends HttpServlet {
             case "PATCH":
                 this.doPatch(req, resp);
                 break;
+            case "LINK": this.doLink(req,resp);
+                break;
             default:
                 super.service(req, resp);  // розподіл за замовчанням
+        }
+    }
+
+    protected void doLink(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        try {
+            Message message = emailService.prepareMessage() ;
+            message.setRecipients(  // Одержувачів також перекладаємо у повідомлення
+                    Message.RecipientType.TO,
+                    InternetAddress.parse( "tom.k.u90@gmail.com" ) ) ;
+            message.setContent( "<b>Вітаємо</b> з реєстрацією на <a href='http://localhost:8080/JavaWeb_PU121/'> сайті JavaWeb </a>!",
+                    "text/html; charset=UTF-8" ) ;
+            emailService.send( message ) ;
+            resp.getWriter().print( "Service sent" ) ;
+        }
+        catch( Exception ex ) {
+            resp.getWriter().print( ex.getMessage() ) ;
         }
     }
 
@@ -47,7 +72,7 @@ public class MailServlet extends HttpServlet {
         emailProperties.put("mail.smtp.ssl.trust", "smtp.gmail.com");
         resp.getWriter().print("MAIL works");
         javax.mail.Session mailSession = javax.mail.Session.getInstance(emailProperties);
-        mailSession.setDebug(true);  // виводити у консоль процес надсилання пошти
+       // mailSession.setDebug(true);  // виводити у консоль процес надсилання пошти
         try (Transport emailTransport = mailSession.getTransport("smtp")) {
             emailTransport.connect("smtp.gmail.com", "tomas.k.u90@gmail.com", "lrmraapcxarfubmv");
             javax.mail.internet.MimeMessage message = new MimeMessage(mailSession);

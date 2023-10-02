@@ -95,38 +95,6 @@ public class UserDao {
             prep.setString(14, user.getEmailConfirmCode());
             prep.setString(15, user.getPhoneConfirmCode());
             prep.executeUpdate();
-
-            Properties emailProperties = new Properties();
-            emailProperties.put("mail.smtp.auth", "true");
-            emailProperties.put("mail.smtp.starttls.enable", "true");
-            emailProperties.put("mail.smtp.host", "smtp.gmail.com");
-            emailProperties.put("mail.smtp.port", "587");
-            emailProperties.put("mail.smtp.ssl.protocols", "TLSv1.2");
-            emailProperties.put("mail.smtp.ssl.trust", "smtp.gmail.com");
-            javax.mail.Session mailSession = javax.mail.Session.getInstance(emailProperties,
-                    new Authenticator() {
-                        @Override
-                        protected PasswordAuthentication getPasswordAuthentication() {
-                            return new PasswordAuthentication("tomas.k.u90@gmail.com", "lrmraapcxarfubmv");
-                        }
-                    }
-            );
-            MimeMessage message = new MimeMessage(mailSession);
-            try {
-                message.setFrom(new javax.mail.internet.InternetAddress("proviryalovich@gmail.com"));
-                message.setSubject("Реєстрація на JavaWeb");
-                message.setRecipients(
-                        Message.RecipientType.TO,
-                        InternetAddress.parse(user.getEmail()));
-                MimeBodyPart htmlPart = new MimeBodyPart();
-                htmlPart.setContent("<b>Вітаємо</b> з реєстрацією <a href='http://localhost:8080/JavaWeb_PU121/'>на сайті!</a> Ваш код підтверження - 'HereMustBeCode'", "text/html; charset=UTF-8");
-                Multipart mailContent = new MimeMultipart();
-                mailContent.addBodyPart(htmlPart);
-                message.setContent(mailContent);
-                Transport.send(message);
-            } catch (MessagingException e) {
-                throw new RuntimeException(e);
-            }
         }
         catch( SQLException ex ) {
             logger.log(
@@ -136,6 +104,25 @@ public class UserDao {
         }
     }
 
+    public boolean confirmEmailCode( User user, String code ) {
+        if( user == null
+                || code == null
+                || ! code.equals( user.getEmailConfirmCode() )
+        ) {
+            return false ;
+        }
+        String sql = "UPDATE " + dbPrefix + "Users SET emailConfirmCode = NULL WHERE id = ?" ;
+        try( PreparedStatement prep = dbProvider.getConnection().prepareStatement(sql) ) {
+
+            prep.setString(1, user.getId().toString());
+            prep.executeUpdate();
+            return true;
+        }
+        catch( SQLException ex ) {
+            logger.log( Level.SEVERE,ex.getMessage() + "--" + sql ) ;
+            return false;
+        }
+    }
     /**
      * Authentication of user
      * @param login

@@ -33,10 +33,17 @@
             <li <% if ("servlet.jsp".equals(pageName)) { %> class="active" <% } %> >
                 <a href="<%=contextPath%>/mail">Mail</a>
             </li>
-            <li> <a class="waves-effect light-blue btn modal-trigger" href="#auth-modal"><span class="material-icons">login</span></a></li>
+            <li> <a class="waves-effect light-blue btn modal-trigger" href="#auth-modal" id="sub"><span class="material-icons">login</span></a></li>
+            <li> <a href="#!" id="exit" class=" light-blue btn modal-trigger">Exit</a></li>
+            <li>
+                <div id="user-avatar" class="avatar-container" style="width: 50px; margin-top:7px; height: 50px; border-radius: 50%; overflow: hidden;">
+
+                </div>
+            </li>
         </ul>
     </div>
 </nav>
+
 <jsp:include page="<%= pageName %>" />
 
 <%-- Materialize Modal (Auth block) --%>
@@ -62,7 +69,9 @@
         <a href="<%= contextPath %>/signup" class="modal-close waves-effect waves-green btn-flat teal lighten-3">Реєстрація</a>
         <a href="#!" class="modal-close waves-effect waves-green btn-flat indigo lighten-3">Забув пароль</a>
         <a class="waves-effect waves-green btn-flat green lighten-3" id="sign-button">Вхід</a>
+
     </div>
+
 </div>
 
 <footer class="page-footer light-blue lighten-1">
@@ -82,13 +91,39 @@
         M.Modal.init(elems, {
             opacity: 0.5
         } ) ;
-        initModalButtons() ;
+        //initModalButtons() ;
+        const token = window.localStorage.getItem('token');
+        const submitBtn=document.getElementById("sub")
+        const exitBtn=document.getElementById("exit")
+        exitBtn.addEventListener( 'click', exitClick ) ;
+        if(token)
+            submitBtn.style.display="none";
+        else
+            exitBtn.style.display="none";
+
+
+
+        const signupButton = document.getElementById('sign-button');
+
+        if( signupButton ) {
+            signupButton.addEventListener( 'click', loginClick ) ;
+        }
+        else {
+            console.error( 'signupButton not found' )
+        }
         window.addEventListener('hashchange', frontRouter) ;
         frontRouter() ;
     });
-
+    function exitClick()
+    {
+        const submitBtn=document.getElementById("sub")
+        const exitBtn=document.getElementById("exit")
+        exitBtn.style.display="none";
+        submitBtn.style.display="block";
+        window.localStorage.clear();
+        window.location.href="<%=contextPath%>/";
+    }
     function frontRouter() {
-        console.log(location.hash);
         switch( location.hash ) {
             case '#front':
                 loadFrontPage();
@@ -129,49 +164,68 @@
         fetch('<%= contextPath %>/front', {
             method: 'GET',
             headers: headers
-        }).then(r => r.text())
-            .then(t => {
-                console.log(t)
+        }).then(r => r.json())
+            .then(j=>{
+                    if(typeof j.login!='undefined')
+                    {
+                        const userAvatar=document.getElementById("user-avatar");
+
+                        if(!userAvatar)throw "user-avatar not found";
+                        if(j.avatar!=null && j.avatar!="undefined")
+                        {
+                            let i = j.avatar.lastIndexOf('\\');
+                            if(i>-1)
+                            {
+                                j.avatar=j.avatar.substring(i+1);
+                            }
+                        }
+                        else
+                        {
+                            j.avatar="default.png"
+                        }
+                        userAvatar.innerHTML=`<img style="max-height:50px; border-radius:15px; margin-right:2%;" src="<%=contextPath%>/upload/${j.avatar}" />`
+// ---------------------- CONFIRM EMAIL --------------------------
+                        if(typeof j.emailConfirmCode=='string'&& j.emailConfirmCode.length > 0 ) {  // є код -- пошта не підтверджена
+                            const confirmDiv = document.getElementById("confirm-email");
+                            if( ! confirmDiv ) throw "confirm-email not found" ;
+                            confirmDiv.innerHTML = `Ваша пошта не підтверджена, введіть код з е-листа
+    <div class="input-field inline"><input id='email-code'/></div><button onclick='confirmCodeClick()'>Підтвердити</button>` ;
+                            confirmDiv.style.border = "1px solid maroon" ;
+                            confirmDiv.style.padding = "5px 10px" ;
+                        }
+                    }
+                    console.log(j)
             });
     }
 
-    // document.addEventListener('DOMContentLoaded', function() {
-    //     var elems = document.querySelectorAll('.modal');
-    //     M.Modal.init(elems, {
-    //         opacity: 0.5,
-    //         dismissible: false
-    //     });
-    //     const signupButton = document.getElementById('submit');
-    //     if( signupButton ) {
-    //         signupButton.addEventListener( 'click', loginClick ) ;
+    // function initModalButtons() {
+    //     const signButton = document.getElementById('sign-button');
+    //     if( signButton ) {
+    //         signButton.addEventListener( 'click', loginClick ) ;
     //     }
     //     else {
-    //         console.error( 'signupButton not found' )
+    //         console.error( '#sign-button not found' );
     //     }
-    // });
-    //
-    // function loginClick() {
-    //     const authLogin = document.getElementById('authLogin');
-    //     if( ! authLogin ) throw "input id='auth-login' not found" ;
-    //     const authPassword = document.getElementById('authPassword');
-    //     if( ! authPassword ) throw "input id='auth-password' not found" ;
-    //
-    //
-    //     const url = "/JavaWeb_PU121/signup?authLogin="+ authLogin.value+"&authPassword="+authPassword.value;
-    //     fetch( url, {
-    //         method: 'PUT'
-    //     }).then( r => r.json()).then(r => document.getElementById('signup').textContent=r.message) ;
     // }
-    function initModalButtons() {
-        const signButton = document.getElementById('sign-button');
-        if( signButton ) {
-            signButton.addEventListener( 'click', loginClick ) ;
-        }
-        else {
-            console.error( '#sign-button not found' );
-        }
+    function confirmCodeClick() {
+        const emailCodeInput = document.getElementById("email-code");
+        if( ! emailCodeInput ) throw "email-code not found" ;
+        fetch('<%=contextPath%>/signup?code='+emailCodeInput.value,{
+            method:"PATCH",
+            headers:{ 'Authorization':`Bearer `+ window.localStorage.getItem('token')}
+        }).then(r=>{
+            if(r.status==202)
+            {
+                alert("Пошту підтверджено");
+                window.location.reload();//оновлюємо сторінку - має зникнути поле підтвердження
+            }
+            else
+            {
+                r.text().then(alert)//передаемо в alert результат r.text()
+            }
+        })
+        console.log( emailCodeInput.value ) ;
     }
-
     function loginClick() {
         const loginInput = document.getElementById('auth-login');
         if( ! loginInput ) throw "input id='auth-login' not found" ;
@@ -189,7 +243,7 @@
             return ;
         }
         // const url = `<%= contextPath %>/signup?auth-login=${authLogin}&auth-password=${authPassword}`;
-        const url = `<%= contextPath %>/signup` ;
+        const url = `<%=contextPath%>/signup` ;
         // let formData = new FormData();
         // formData.append('auth-login',authLogin );
         // formData.append('auth-password',authPassword );
@@ -210,16 +264,27 @@
             .then(data => {
 // data буде об'єктом, який містить поля statusCode та message
                 console.log(data);
-                if( data.statusCode == 200 ) {
-                    window.localStorage.setItem('token', data.message);
-                    // close Material modal
-                    const instance = M.Modal.getInstance(document.getElementById("auth-modal"));
+                if(data.statusCode==200)
+                {
+                    //декодуємо токен, дізнаємось дати
+                    let token = JSON.parse(atob(data.message))
+                    window.localStorage.setItem('token',data.message);
+                    const submitBtn=document.getElementById("sub")
+                    const exitBtn=document.getElementById("exit")
+                    exitBtn.style.display="block";
+                    submitBtn.style.display="none";
+                    loginInput.value="";
+                    passwordInput.value="";
+                    var instance = M.Modal.getInstance(document.getElementById("auth-modal"));
                     instance.close();
+                    location.reload();
                 }
-                else {
-                    const result = document.getElementById('result');
-                    result.textContent = data.message;
-                }
+                else
+                {  const result = document.getElementById('result');
+                    result.textContent=data.message;}
+
+
+
             })
             .catch(error => {
                 console.error('Fetch Error:', error);

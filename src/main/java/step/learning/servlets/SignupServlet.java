@@ -12,10 +12,13 @@ import step.learning.db.dao.UserDao;
 import step.learning.db.dao.WebTokenDao;
 import step.learning.db.dto.User;
 import step.learning.db.dto.WebToken;
+import step.learning.services.email.EmailService;
 import step.learning.services.formparse.FormParseResult;
 import step.learning.services.formparse.FormParseService;
 import step.learning.services.kdf.KdfService;
 
+import javax.mail.Message;
+import javax.mail.internet.InternetAddress;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -39,17 +42,68 @@ public class SignupServlet extends HttpServlet {
     private final UserDao userDao;
     private final WebTokenDao webTokenDao;
     private final Logger logger;
+    private final EmailService emailService;
 
     @Inject
-    public SignupServlet(FormParseService formParseService, @Named("UploadDir") String uploadDir, KdfService kdfService, UserDao userDao, WebTokenDao webTokenDao, Logger logger) {
+    public SignupServlet(FormParseService formParseService, @Named("UploadDir") String uploadDir, KdfService kdfService, UserDao userDao, WebTokenDao webTokenDao, Logger logger, EmailService emailService) {
         this.formParseService = formParseService;
         this.uploadDir = uploadDir;
         this.kdfService = kdfService;
         this.userDao = userDao;
         this.webTokenDao = webTokenDao;
         this.logger = logger;
+        this.emailService = emailService;
     }
 
+    @Override
+    protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+//метод викликається до того як відбувається розподіл за doXxxx методами,
+        //тут є можливість вплинути на цей розподіл
+        switch ((req.getMethod().toUpperCase()))
+        {
+
+            case "PATCH": this.doPatch(req,resp);
+                break;
+            default:
+                super.service(req,resp);//розподіл за замовчуванням
+        }
+    }
+
+    protected void doPatch( HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String code = req.getParameter("code");
+        if(code==null)
+        {
+            resp.setStatus(400);
+            resp.getWriter().print("Missing required parameter: code");
+            return;
+        }
+        String authHeader = req.getHeader("Authorization");
+        if(authHeader==null)
+        {
+            resp.setStatus(401);
+            resp.getWriter().print("Unauthorized");
+            return;
+        }
+        User user = webTokenDao.getSubject(authHeader);
+        if(user==null)
+        {
+            resp.setStatus(403);
+            resp.getWriter().print("Forbidden: invalid or expired token");
+            return;
+        }
+        // перевіряємо збіг коду у БД та коду у запиті
+        if(userDao.confirmEmailCode(user,code))
+        {
+            resp.setStatus(202);
+            resp.getWriter().print("Code accepted");
+
+        }
+        else {
+            resp.setStatus(203);
+            resp.getWriter().print("Code rejected");
+
+        }
+    }
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
@@ -59,18 +113,27 @@ public class SignupServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        SignupFormData formData;
+        SignupFormData formData ;
         ResponseData responseData;
         try {
-            formData = new SignupFormData(req);
+            formData = new SignupFormData( req ) ;
             User user = formData.toUserDto();
             userDao.add(user);
-            // TODO: send confirm codes
-            responseData = new ResponseData(200, "OK");
+            //send confirm codes
+            Message message = emailService.prepareMessage() ;
+            message.setRecipients(  Message.RecipientType.TO, InternetAddress.parse( user.getEmail()) ) ;
+            message.setContent(
+                    String.format(  "<b>Вітаємо</b> з реєстрацією на <a href='http://localhost:8080/JavaWeb_PU121/ч'> сайті JavaWeb </a>! </br>"+
+                                    "Для підтвердження пошти використайте код <b style='font-size:large; color=green'>%s</b>",
+                            user.getEmailConfirmCode()),
+                    "text/html; charset=UTF-8" );
+            emailService.send( message ) ;
+            responseData= new ResponseData(200,"Ok");
 
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, ex.getMessage());
-            responseData = new ResponseData(500, "Error");
+        }
+        catch( Exception ex ) {
+            logger.log( Level.SEVERE, ex.getMessage() ) ;
+            responseData = new ResponseData(500, "There was an error. Look at server's logs");
         }
 
         GsonBuilder builder = new GsonBuilder();
